@@ -59,8 +59,10 @@ public class TwoBoy {
 		//init random birth
 		RandomBirth birth = new RandomBirth();
 		
-		for(int i=0;i<total;i++){
-			TwoKids kids = new TwoKids(birth.genderBirth(),birth.dayBirth(), birth.genderBirth(),birth.dayBirth());
+		for(int i=0;i<total;i++){// every birth of children
+
+			TwoKids kids = TwoKids.born(birth); //get two kids
+
 			if( kids.isAtleastBoyDay2() ){ //至少有一个周二的男孩
 				sum ++;
 				if( kids.isTwoBoy() ){ //两个都是男孩
@@ -143,5 +145,14 @@ class TwoKids{
 	 */
 	public boolean isAtleastBoyDay2(){
 		return (x1=='M' && y1==2) || (x2=='M' && y2==2);
+	}
+
+	/**
+	 * random born two kids with gender and day of week.
+	 * @param birth, a random parameter for birth.
+	 * @return TwoKids
+	 */
+	public static TwoKids born(RandomBirth birth){
+		return new TwoKids(birth.genderBirth(),birth.dayBirth(), birth.genderBirth(),birth.dayBirth());
 	}
 }
