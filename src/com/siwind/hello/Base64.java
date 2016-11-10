@@ -5,6 +5,9 @@ package com.siwind.hello;
  */
 public class Base64 {
 
+    public static String dec8(String str){
+        return new String(java.util.Base64.getDecoder().decode(str));
+    }
     /**
      * working for jdk8
      * @return
@@ -36,6 +39,7 @@ public class Base64 {
     public static void test(){
         System.out.println(enc7());
         System.out.println(enc8());
+        System.out.println(dec8("bXl1c2VybmFtZTpteVBhc3N3b3Jk"));
     }
 
     /**
