@@ -1,4 +1,4 @@
-package com.siwind.hello;
+package com.siwind.util;
 
 /**
  * Created by admin on 2016/11/10.

@@ -2,6 +2,8 @@ package com.siwind.hello;
 
 //import sun.misc.BASE64Decoder;
 
+import com.siwind.util.Base64Util;
+
 /**
  * Created by admin on 2016/11/10.
  */
