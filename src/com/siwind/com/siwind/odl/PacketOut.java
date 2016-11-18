@@ -81,6 +81,9 @@ public class PacketOut {
     public static void testODL1() throws Exception{
         String strJson = buildInput_transmit_packet();
         System.out.println(strJson);
+
+        strJson = buildInput_send_packet();
+        System.out.println(strJson);
     }
 
     /**
