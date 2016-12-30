@@ -82,8 +82,8 @@ public class BibRef {
 
 			str = 
 "$bInit = true;}" + crlf + 
-"if( is_null($rfcid) ) return false;" + crlf + 
-"if( is_null($arr[$rfcid]) ) return false;" + crlf +
+"if( is_null($rfcid) ) return NULL;" + crlf + 
+"if( is_null($arr[$rfcid]) ) return NULL;" + crlf +
 "return htmlspecialchars($arr[$rfcid]);" + crlf +
 "} " + crlf +
 "?>";
