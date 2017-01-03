@@ -3,10 +3,14 @@
  */
 package com.siwind.hello.bibref;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -17,6 +21,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+
+import jdk.internal.dynalink.beans.StaticClass;
 
 
 /**
@@ -38,14 +44,16 @@ public class BibRef {
 	 * 
 	 */
 	public static void parseBibXml() {
-		ArrayList<BibItem> bibs = parseXml("D:/rfc-index.xml");
-		//ArrayList<BibItem> bibs = parseXml("D:/a.xml");
+		String strDir = "D:/Temp/rfc/";
+		ArrayList<BibItem> bibs = parseXml(strDir + "rfc-index.xml");
+		//ArrayList<BibItem> bibs = parseXml(strDir + "a.xml");
 		
-		//writeBib2FileXml("D:/mybib.xml", bibs);
+		writeBib2FileXml(strDir + "myrfc-index.xml", bibs);
 		//writeBib2File("D:/myrfc.bib", bibs);
-		//writeBib2File("D:/rfc.bib", bibs);
+		writeBib2File(strDir + "rfc.bib", bibs);
 		
-		writeBib2Php("D:/rfc-inc.php",bibs);
+		writeBib2Php(strDir + "rfc-inc.php",bibs);
+		System.out.println("Done!");
 	}
 	
 	/**
@@ -64,6 +72,7 @@ public class BibRef {
 			str = 
 "<?php " + crlf + 
 "define('RFC_MAX'," + bibs.get(bibs.size()-1).id + ");" + crlf +
+"// return array('BIB'=>...,  'URL'=>...) " + crlf +
 "function getBibItem($rfcid){" + crlf +
 "static $bInit = false;" + crlf + 
 "static $arr= array();"  + crlf +  
@@ -82,9 +91,13 @@ public class BibRef {
 
 			str = 
 "$bInit = true;}" + crlf + 
-"if( is_null($rfcid) ) return NULL;" + crlf + 
-"if( is_null($arr[$rfcid]) ) return NULL;" + crlf +
-"return htmlspecialchars($arr[$rfcid]);" + crlf +
+"$rfc = intval($rfcid);" + crlf +
+"$res = array('BIB'=>NULL, 'URL'=>NULL);" + crlf +
+"if( ($rfc>=1) and ($rfc<=RFC_MAX) ){" + crlf +
+"\t$res['BIB'] = htmlspecialchars($arr[$rfc]);" + crlf + 
+"\tif( !is_null( $arr[$rfc]) ) {$res['URL']=\"http://tools.ietf.org/html/rfc$rfc\";}" + crlf +
+"}" + crlf +
+"return $res;" + crlf +
 "} " + crlf +
 "?>";
 
@@ -228,6 +241,9 @@ class BibItem {
 	String doi;
 	String cur_status;
 	String pub_status;
+	String issn;
+	String pages;
+	
 
 	public String getDocid() {
 		return docid;
@@ -303,6 +319,8 @@ class BibItem {
 		str.append("\tPUBLISHER = \"{" + "RFC Editor" + "}\",").append(crlf);
 		str.append("\tYEAR = " + year + ",").append(crlf);
 		str.append("\tMONTH = \"" + month + "\",").append(crlf);
+		if( !issn.isEmpty() ) str.append("\tISSN = \"{" + issn + "}\",").append(crlf); 
+		if( !pages.isEmpty() ) str.append("\tPAGES = \"1-" + pages + "\",").append(crlf);
 		str.append("\tDOI = \"{" + doi + "}\",").append(crlf);
 		str.append("\tHOWPUBLISHED = \"{" + "Internet Requests for Comments" + "}\",").append(crlf);
 		str.append("\tURL = \"{" + "http://www.rfc-editor.org/rfc/rfc" + id + ".txt" + "}\"").append(crlf);
@@ -323,6 +341,8 @@ class BibItem {
 		str.append("<year>" + year + "</year>").append(crlf);
 		str.append("<month>" + month + "</month>").append(crlf);
 		str.append("<doi>" + doi + "</doi>").append(crlf);
+		str.append("<issn>" + issn + "</issn>").append(crlf);
+		str.append("<pages>" + pages + "</pages>").append(crlf);
 		str.append("<current-status>" + cur_status + "</current-status>").append(crlf);
 		str.append("<publication-status>" + pub_status + "</publication-status>").append(crlf);
 		
@@ -331,6 +351,19 @@ class BibItem {
 		return str.toString();
 	}
 
+	/**
+	 * http://www.ietf.org/rfc/rfc1654.txt
+	 */
+	public BibItem genISSN_Pages(){
+		String strUrl = "http://www.ietf.org/rfc/rfc" + id + ".txt";
+		String strContent = WebUtil.getHtmlContent(strUrl);
+		this.issn = WebUtil.getISSN(strContent);
+		this.pages = WebUtil.getPageNum(strContent);
+		return this;
+	}
+	/**
+	 * 
+	 */
 	public void print() {
 		System.out.println(
 				"RFCNum=" + rfcid + ", doc-id=" + docid + ", title=" + title + ", author=" + author + ",  year=" + year
@@ -395,6 +428,94 @@ class BibItem {
 
 		// item.print();
 		// System.out.println(item.genBibItemStr());
-		return item;
+		return item.genISSN_Pages();
 	}
+}
+
+class WebUtil{
+	
+	static StringBuilder stringBuilder = null;
+	static{
+		stringBuilder = new StringBuilder(1024*1024);   // pre allocate memory to speed up url accessing.
+	}
+	public static String getHtmlContent(String htmlurl) {  
+		
+		return getHtmlContent(htmlurl,stringBuilder);
+	}
+    /**  
+     * 读取网页全部内容  
+     */  
+    public static String getHtmlContent(String htmlurl, StringBuilder sb) {  
+        URL url;  
+        String temp;  
+        //StringBuilder sb = new StringBuilder("");  
+        sb.setLength(0);
+        System.out.println("访问URL : " + htmlurl);
+        
+        BufferedReader in = null;
+        try {  
+            url = new URL(htmlurl);  
+            in = new BufferedReader(new InputStreamReader(url.openStream()));// 读取网页全部内容 , default char-set
+            while ((temp = in.readLine()) != null) {  
+                sb.append(temp);  
+            }  
+            in.close();  
+        } catch ( MalformedURLException me) {  
+            System.out.println("你输入的URL格式有问题!");  
+            me.getMessage();  
+        } catch ( FileNotFoundException e) {  
+        	System.out.println("网页未找到! URL=" + htmlurl);    
+        }  catch (Exception e) {
+			// TODO: handle exception
+		}finally {
+			if( in!=null){
+				try {
+					in.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+        return sb.toString();  
+    }  
+    
+    /**
+     * 
+     * @param strContent
+     * @return
+     */
+    public static String getISSN(String strContent){
+    	String str = "";
+    	int index = strContent.indexOf("ISSN: ");
+    	if( index>=0 ){
+    		index += 6; //skip "ISSN: "
+    		int lastindex = index;
+    		while (lastindex<strContent.length() && !Character.isWhitespace(strContent.charAt(lastindex))) 	lastindex ++;
+
+    		str = strContent.substring(index, lastindex).trim();
+    	}
+    	return str;
+    }
+    /**
+     * 
+     * @param strContent
+     * @return
+     */
+    public static String getPageNum(String strContent){
+    	String str = "";
+    	int index = strContent.lastIndexOf("[Page ");  // [Page 16]
+    	if( index>=0 ){
+    		index +=6; //skip "[Page "
+    		int lastindex = index;
+    		
+    		while(lastindex<strContent.length() && Character.isDigit(strContent.charAt(lastindex))) lastindex++;
+    		while (lastindex<strContent.length() && Character.isWhitespace(strContent.charAt(lastindex))) 	lastindex ++;
+    		
+    		if( strContent.charAt(lastindex) == ']'){
+    			str = strContent.substring(index, lastindex).trim();
+    		}
+    	}
+    	return str;
+    }
 }
