@@ -12,6 +12,13 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -22,8 +29,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import jdk.internal.dynalink.beans.StaticClass;
-
 
 /**
  * @author admin
@@ -31,27 +36,107 @@ import jdk.internal.dynalink.beans.StaticClass;
  */
 public class BibRef {
 
+	public static String strCurDir = "";
+	
+	static{
+		strCurDir = System.getProperty("user.dir");
+		
+		//strDir = System.getProperty("user.dir");
+		if( strCurDir.charAt(strCurDir.length()-1) != '/'  || strCurDir.charAt(strCurDir.length()-1) != '\\'){
+			strCurDir += "/";
+		}
+	}
+		
+	public static void test(){
+		int threadnum = 2048;
+		String strDir = "D:/Temp/rfc/";
+				
+		System.out.println("输出路径 : " + strDir);
+		
+		//get current rfc-index.xml file。
+		System.out.println("fetch rfc-index.xml");
+		//fetchRfcIndexFile(strDir + "rfc-index.xml");
+		
+		ArrayList<BibItem> bibsAll = parseXml(strDir + "rfc-index.xml");
+		System.out.println("Number RFC files = " + bibsAll.size());  //7852
+		
+		List<BibItem> bibs = bibsAll.subList(0, 20);
+		//ArrayList<BibItem> bibs = parseXml(strDir + "a.xml");
+		
+		
+		System.out.println("Total number of RFC files = " + bibs.size());
+		
+		// fetch issn and pages from url!
+		System.out.println("Start pull ISSN and PAGES of RFC files...");
+		fetchISSN_Pages(bibs, threadnum);
+		
+		System.out.println("wrtite to myrfc-index.xml");
+		writeBib2FileXml(strDir + "myrfc-index.xml", bibs);
+		//writeBib2File("D:/myrfc.bib", bibs);
+		System.out.println("wrtite to rfc.bib");
+		writeBib2File(strDir + "rfc.bib", bibs);
+		
+		System.out.println("wrtite to rfc-inc.php");
+		writeBib2Php(strDir + "rfc-inc.php",bibs);
+		System.out.println("Done!");
+	}
+	/**
+	 * 
+	 * @param args
+	 */
+	public static void doParseBibXML(String[] args) {
+		if( args.length <1 ){
+			//System.out.println("args length = " + args.length);
+			System.out.println("Usage: java -jar bibref.jar <n>");
+			System.out.println("\t where  n - thread number (1-2048),  512 is recommended.");
+			System.out.println("");
+			return;
+		}
+		int threadnum = Integer.parseInt(args[0]);
+		if( threadnum>0 && threadnum<=2048 ){
+			parseBibXml(threadnum);  //do job now!
+		} else{
+			System.out.println("Parameter wrong! thread number = " + args[0]);
+		}
+	}
+	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-		parseBibXml();
+		//test();
+		doParseBibXML(args);
+
 	}
 
 	/**
-	 * 
+	 * @threadnum : thread number
 	 */
-	public static void parseBibXml() {
-		String strDir = "D:/Temp/rfc/";
-		ArrayList<BibItem> bibs = parseXml(strDir + "rfc-index.xml");
-		//ArrayList<BibItem> bibs = parseXml(strDir + "a.xml");
+	public static void parseBibXml(int threadnum) {
 		
+		String strDir = strCurDir; 
+		
+		System.out.println("输出路径 : " + strDir);
+		
+		//get current rfc-index.xml file。
+		System.out.println("fetch rfc-index.xml");
+		fetchRfcIndexFile(strDir + "rfc-index.xml");
+		
+		ArrayList<BibItem> bibs = parseXml(strDir + "rfc-index.xml");
+		
+		// fetch issn and pages from url!
+		System.out.println("Start pull ISSN and PAGES of RFC files...");
+		fetchISSN_Pages(bibs, threadnum);
+		
+		System.out.println("wrtite to myrfc-index.xml");
 		writeBib2FileXml(strDir + "myrfc-index.xml", bibs);
-		//writeBib2File("D:/myrfc.bib", bibs);
+
+		System.out.println("wrtite to rfc.bib");
 		writeBib2File(strDir + "rfc.bib", bibs);
 		
+		System.out.println("wrtite to rfc-inc.php");
 		writeBib2Php(strDir + "rfc-inc.php",bibs);
 		System.out.println("Done!");
 	}
@@ -61,7 +146,7 @@ public class BibRef {
 	 * @param fileName
 	 * @param bibs
 	 */
-	public static void writeBib2Php(String fileName, ArrayList<BibItem> bibs){
+	public static void writeBib2Php(String fileName, List<BibItem> bibs){
 		BufferedWriter out = null;
 		String crlf = System.getProperty("line.separator");
 		String str = "";
@@ -116,7 +201,7 @@ public class BibRef {
 		}
 	}
 	
-	public static void writeBib2FileXml(String fileName, ArrayList<BibItem> bibs) {
+	public static void writeBib2FileXml(String fileName, List<BibItem> bibs) {
 		BufferedWriter out = null;
 		String crlf = System.getProperty("line.separator");
 		
@@ -149,7 +234,7 @@ public class BibRef {
 	/**
 	 * 使用BufferedWriter类写文本文件
 	 */
-	public static void writeBib2File(String fileName, ArrayList<BibItem> bibs) {
+	public static void writeBib2File(String fileName, List<BibItem> bibs) {
 		BufferedWriter out = null;
 
 		try {
@@ -158,11 +243,7 @@ public class BibRef {
 				out.write(bibs.get(i).genBibItemStr());
 				out.newLine();
 			}
-			// out.write("Hello Kuka:");
-			// out.newLine(); //注意\n不一定在各种计算机上都能产生换行的效果
-			// out.write(" My name is coolszy!\n");
-			// out.write(" I like you and miss you。");
-			// out.close();
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -177,6 +258,78 @@ public class BibRef {
 		}
 	}
 	
+	/**
+	 * http://www.rfc-editor.org/rfc/rfc-index.xml
+	 */
+	public static void fetchRfcIndexFile(String strFileName) {
+		String strUrl = "http://www.rfc-editor.org/rfc/rfc-index.xml";
+		String strContent = WebUtil.getHtmlContent(strUrl);
+		if( !strContent.isEmpty() ){
+		BufferedWriter out = null;
+
+			try {
+				out = new BufferedWriter(new FileWriter(strFileName));
+				out.write(strContent);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} finally {
+				if (out != null) {
+					try {
+						out.close();
+					} catch (Exception e2) {
+						// TODO: handle exception
+					}
+				}
+			}
+		}
+	}
+	/**
+	 * 
+	 * @param bibs
+	 */
+	public static void fetchISSN_Pages(List<BibItem> bibs, int threadnum) {
+		//int threadnum = 2048;
+		ExecutorService pool = null;
+		//pool = Executors.newCachedThreadPool();
+		pool = Executors.newFixedThreadPool(threadnum);
+		
+		//ArrayList<Future<Integer>> resultList = new ArrayList<Future<Integer>>();
+		ArrayList<Callable<Integer>> tasks = new ArrayList<>();
+		//
+		RfcTask.setNumFinished(0);
+		
+		for( int i=0;i<bibs.size();i++){
+			BibItem item = bibs.get(i);
+			tasks.add(new RfcTask(item));
+					
+		}
+		List<Future<Integer>> resultList = null;
+		try {
+			resultList = pool.invokeAll(tasks);
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} //
+		//
+		for(Future<Integer> future : resultList)
+        {
+              try
+              {
+                  System.out.println("Future result is - " + " - " + future.get() + "; And Task done is " + future.isDone());
+              } 
+              catch (InterruptedException  e) 
+              {
+                  e.printStackTrace();
+              }
+              catch (ExecutionException e) {
+				// TODO: handle exception
+            	  e.printStackTrace();
+			}
+          }
+          //shut down the executor service now
+          pool.shutdown();
+	}
 	/**
 	 * 
 	 * @param fileName
@@ -241,8 +394,8 @@ class BibItem {
 	String doi;
 	String cur_status;
 	String pub_status;
-	String issn;
-	String pages;
+	String issn = "";
+	String pages = "";
 	
 
 	public String getDocid() {
@@ -356,9 +509,11 @@ class BibItem {
 	 */
 	public BibItem genISSN_Pages(){
 		String strUrl = "http://www.ietf.org/rfc/rfc" + id + ".txt";
-		String strContent = WebUtil.getHtmlContent(strUrl);
+		String strContent = WebUtil.getHtmlContent(strUrl); //
 		this.issn = WebUtil.getISSN(strContent);
 		this.pages = WebUtil.getPageNum(strContent);
+		
+		System.out.println("Finished Accessing URL : " + strUrl);
 		return this;
 	}
 	/**
@@ -428,7 +583,7 @@ class BibItem {
 
 		// item.print();
 		// System.out.println(item.genBibItemStr());
-		return item.genISSN_Pages();
+		return item ; // .genISSN_Pages();
 	}
 }
 
@@ -438,26 +593,35 @@ class WebUtil{
 	static{
 		stringBuilder = new StringBuilder(1024*1024);   // pre allocate memory to speed up url accessing.
 	}
-	public static String getHtmlContent(String htmlurl) {  
+	
+	public static String getHtmlContentBlocking(String htmlurl) {  
 		
 		return getHtmlContent(htmlurl,stringBuilder);
 	}
+	
+public static String getHtmlContent(String htmlurl) {  
+		StringBuilder  sb = new StringBuilder(20*1024);
+	
+		return getHtmlContent(htmlurl,sb);
+	}
+	
     /**  
      * 读取网页全部内容  
      */  
     public static String getHtmlContent(String htmlurl, StringBuilder sb) {  
+    	String crlf = System.getProperty("line.separator");
         URL url;  
         String temp;  
         //StringBuilder sb = new StringBuilder("");  
         sb.setLength(0);
-        System.out.println("访问URL : " + htmlurl);
+        System.out.println("Access URL : " + htmlurl);
         
         BufferedReader in = null;
         try {  
             url = new URL(htmlurl);  
             in = new BufferedReader(new InputStreamReader(url.openStream()));// 读取网页全部内容 , default char-set
             while ((temp = in.readLine()) != null) {  
-                sb.append(temp);  
+                sb.append(temp).append(crlf);
             }  
             in.close();  
         } catch ( MalformedURLException me) {  
@@ -518,4 +682,30 @@ class WebUtil{
     	}
     	return str;
     }
+}
+
+//============================
+class RfcTask implements Callable<Integer>
+{
+	private static AtomicInteger  numFinished = new AtomicInteger(0);
+	
+	private BibItem item;
+
+	public RfcTask(BibItem item) {
+		this.item = item;
+	}
+
+	@Override
+	public Integer call() throws Exception {
+		item.genISSN_Pages();
+		int n = numFinished.incrementAndGet();
+		System.out.println("Number finished: " + n);
+		return item.id;
+	}
+	/**
+	 * 
+	 */
+	public static void setNumFinished(int n) {
+		numFinished.set(n);
+	}
 }
