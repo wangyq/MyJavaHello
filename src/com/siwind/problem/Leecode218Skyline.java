@@ -77,7 +77,7 @@ public class Leecode218Skyline {
 
         ArrayList<int[]> skyline = new ArrayList<>();
 
-        // Priority for end location
+        // Priority for lower location
         Queue<Node> readyQueue = new PriorityQueue<Node>(new Comparator<Node>() {
             public int compare(Node first, Node second) {
                 return first.x - second.x; //lower location first!
