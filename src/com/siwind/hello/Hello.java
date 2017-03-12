@@ -5,6 +5,8 @@ package com.siwind.hello;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Queue;
 
 
 /**
@@ -181,7 +183,7 @@ public class Hello {
 		ISay dog = new GoodDog();
 		dog.say();
 	}
-	public static void testQueue(){
+	public static void testQueue1(){
 		RoundQueue<Integer> queue = new RoundQueue<Integer>();
 
 		queue.push(2);queue.push(5);queue.push(8);
@@ -192,13 +194,26 @@ public class Hello {
 
 		System.out.println();
 	}
+
+	public static void testQueue2(){
+		Queue<Integer> queue = new PriorityQueue<>();
+		queue.offer(2);
+		queue.offer(3);
+		queue.offer(2);
+		queue.offer(3);
+		for( Integer v: queue){
+			System.out.print(v + " ");
+		}
+		System.out.println();
+	}
+
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-		testQueue();
+		testQueue2();
 		//testPackage();
 		
 		//testForName();
