@@ -17,7 +17,7 @@ public class SegmentCover {
         int[][] lines = {{1,2},{1,3}, {3,8},{4,6},{5,8},{16,20},{20,22}};
 
 
-        List<int[]> cover = new SegmentCover().LineOutline(lines);
+        List<int[]> cover = new SegmentCover().findOutline(lines);
         for( int[] v: cover){
             System.out.print("[" + v[0] + "," + v[1] + "] ");
         }
@@ -92,7 +92,7 @@ public class SegmentCover {
      * @param lines
      * @return
      */
-    public List<int[]> LineOutline(int[][] lines){
+    public List<int[]> findOutline(int[][] lines){
         class Node{
             public int start, end;
             public Node(int start, int end){
