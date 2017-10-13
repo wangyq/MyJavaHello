@@ -13,6 +13,7 @@ public class Dog implements ISay {
 		Cat cat = new Cat();
 		cat.say();
 		cat.print();
+		//
 	}
 
 	public void print(){
