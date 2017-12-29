@@ -108,7 +108,8 @@ public class StringUtil {
     	//System.out.println("Hello, world!");
     	
     	//TestReg1();
-    	TestReg2();
+    	//TestReg2();
+    	TestStrSplit();
     }
     static final String regFilteName_FromPDF = "[\r\n\t]|   +|　　+|( |　){2,}|(　| ){2,}|#+"; //
     
@@ -144,4 +145,25 @@ public class StringUtil {
     		System.out.println(s+"]");
     	}
     }
+    
+    /**
+     * 1) . | * + \ 等都是转义字符，必须得加"\\"
+     * there are 12 characters with special meanings:
+     * the backslash \, the caret ^, the dollar sign $, 
+     * the period or dot ., the vertical bar or pipe symbol |, 
+     * the question mark ?, the asterisk or star *, the plus sign +, 
+     * the opening parenthesis (, the closing parenthesis ), 
+     * and the opening square bracket [, the opening curly brace {, 
+     * These special characters are often called "metacharacters".
+     * 2) 如果在一个字符串中有多个分隔符，可以用“|”作为连字符
+     * 3) The easiest way is to use StringUtils#split(java.lang.String, char) in apache's  org.apache.commons.lang.StringUtils
+     */
+    public static void TestStrSplit() {
+    	String str = "1.2.3.4/24 25";
+    	String[] ss = str.split("\\s+|/");
+    	for(String s: ss) {
+    		System.out.println(s);
+    	}
+    }
+    
 }
